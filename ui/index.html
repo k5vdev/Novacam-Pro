@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovaCam Pro</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="lucide.min.js"></script>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Cabecera: marca, conexión y estado del teléfono -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-mark"><i data-lucide="aperture"></i></div>
+        <h1 class="brand-title">NovaCam <span class="badge-pro">PRO</span></h1>
+      </div>
+
+      <div class="header-right">
+        <button class="chip chip-btn" id="wifiBtn" title="Cambiar entre USB y Wi-Fi sin cables">
+          <i data-lucide="usb" id="connIconSvg"></i>
+          <span id="connText">Modo USB</span>
+        </button>
+
+        <div class="chip device offline" id="deviceStatus">
+          <span class="status-dot offline" id="statusDot"></span>
+          <i data-lucide="smartphone"></i>
+          <span class="device-model" id="deviceModelBadge">Buscando teléfono…</span>
+          <span class="battery" id="deviceBatteryWrap" style="display:none">
+            <i data-lucide="battery-medium"></i>
+            <span id="deviceBattery">--%</span>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Varios teléfonos: cada uno funciona por separado y se maneja desde esta misma ventana -->
+    <div class="device-strip hidden" id="deviceStrip" role="tablist" aria-label="Teléfonos conectados"></div>
+
+    <!-- Vista previa (héroe) con controles flotantes -->
+    <section class="preview-card aspect-16-9" id="previewCard">
+      <img id="previewImg" class="preview-media fit-contain" alt="Vista previa en vivo" style="display:none">
+
+      <div class="preview-overlay" id="previewPlaceholder">
+        <div class="placeholder-icon"><i data-lucide="camera-off"></i></div>
+        <span id="previewStatusMsg" class="placeholder-title">Vista previa apagada</span>
+        <span class="placeholder-sub" id="previewHint">Enciende la cámara para ver tu imagen en vivo</span>
+      </div>
+
+      <div class="live-badge" id="previewLiveBadge">
+        <span class="live-dot"></span>
+        <span id="previewPillText">OFFLINE</span>
+      </div>
+
+      <div class="preview-top-right">
+        <select id="aspectRatioSelect" class="glass-select" title="Relación de aspecto de la vista previa">
+          <option value="16-9" selected>16:9</option>
+          <option value="4-3">4:3</option>
+          <option value="9-16">9:16</option>
+        </select>
+        <button class="glass-btn" id="fitToggleBtn" title="Ajustar o llenar el marco">
+          <i data-lucide="maximize"></i><span id="fitText">Ajustar</span>
+        </button>
+      </div>
+
+      <div class="dock">
+        <button class="dock-btn" id="togglePreviewBtn" title="Pausar / reanudar vista previa">
+          <i data-lucide="eye"></i>
+        </button>
+        <button class="dock-btn" id="quickFlipLensBtn" title="Cambiar entre cámara trasera y frontal">
+          <i data-lucide="switch-camera"></i>
+        </button>
+        <button class="dock-shutter" id="photoBtn" title="Guardar foto en tu carpeta Imágenes">
+          <i data-lucide="camera"></i>
+        </button>
+        <button class="dock-btn dock-wide" id="quickFocusBtn" title="Alternar autoenfoque / enfoque manual">
+          <i data-lucide="focus"></i><span id="quickFocusText">AF: Auto</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Módulos: la tarjeta abre sus ajustes, el interruptor lo enciende -->
+    <nav class="modules" role="tablist" aria-label="Módulos">
+      <div class="module selected" id="camCard" data-tab="camera" role="tab" tabindex="0">
+        <div class="module-row">
+          <span class="module-icon"><i data-lucide="video"></i></span>
+          <label class="switch" title="Encender cámara virtual">
+            <input type="checkbox" id="camToggle"><span class="slider"></span>
+          </label>
+        </div>
+        <span class="module-title">Cámara</span>
+        <span class="module-badge idle" id="camBadge">Inactiva</span>
+      </div>
+
+      <div class="module" id="screenCard" data-tab="screen" role="tab" tabindex="0">
+        <div class="module-row">
+          <span class="module-icon"><i data-lucide="monitor-smartphone"></i></span>
+          <label class="switch" title="Controlar la pantalla del teléfono">
+            <input type="checkbox" id="screenToggle"><span class="slider"></span>
+          </label>
+        </div>
+        <span class="module-title">Pantalla</span>
+        <span class="module-badge idle" id="screenBadge">Inactiva</span>
+      </div>
+
+      <div class="module" id="micCard" data-tab="mic" role="tab" tabindex="0">
+        <div class="module-row">
+          <span class="module-icon"><i data-lucide="mic" id="micIcon"></i></span>
+          <label class="switch" title="Transmitir audio del teléfono">
+            <input type="checkbox" id="micToggle"><span class="slider"></span>
+          </label>
+        </div>
+        <span class="module-title" id="micTitle">Audio / Mic</span>
+        <span class="module-badge idle" id="micBadge">Inactivo</span>
+      </div>
+    </nav>
+
+    <!-- Ajustes del módulo seleccionado -->
+    <main class="settings">
+
+      <!-- ============ CÁMARA ============ -->
+      <div class="tab-pane active" id="paneCamera">
+
+        <section class="group">
+          <h2 class="group-title"><i data-lucide="aperture"></i> Captura <small>se aplica al instante</small></h2>
+
+          <div class="field">
+            <span class="field-label"><i data-lucide="switch-camera"></i> Lente</span>
+            <div class="seg" data-for="lensSelect">
+              <button type="button" data-v="0">Trasera</button>
+              <button type="button" data-v="1">Frontal</button>
+              <button type="button" data-v="2">Gran angular</button>
+            </div>
+            <select id="lensSelect" hidden>
+              <option value="0" selected>Trasera (0)</option>
+              <option value="1">Frontal (1)</option>
+              <option value="2">Gran Angular (2)</option>
+            </select>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <span class="field-label"><i data-lucide="monitor"></i> Resolución</span>
+              <div class="seg" data-for="resSelect">
+                <button type="button" data-v="720">720p</button>
+                <button type="button" data-v="1080">1080p</button>
+              </div>
+              <select id="resSelect" hidden>
+                <option value="720" selected>720p HD</option>
+                <option value="1080">1080p FHD</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <span class="field-label"><i data-lucide="gauge"></i> Fotogramas</span>
+              <div class="seg" data-for="fpsSelect">
+                <button type="button" data-v="20">20</button>
+                <button type="button" data-v="24">24</button>
+                <button type="button" data-v="30">30</button>
+              </div>
+              <select id="fpsSelect" hidden>
+                <option value="30" selected>30 FPS</option>
+                <option value="24">24 FPS</option>
+                <option value="20">20 FPS</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="field-label"><i data-lucide="rotate-cw"></i> Rotación</span>
+            <div class="seg" data-for="rotSelect">
+              <button type="button" data-v="0">0°</button>
+              <button type="button" data-v="90">90°</button>
+              <button type="button" data-v="180">180°</button>
+              <button type="button" data-v="270">270°</button>
+            </div>
+            <select id="rotSelect" hidden>
+              <option value="0" selected>0° Normal</option>
+              <option value="90">90° Vertical</option>
+              <option value="180">180° Invertido</option>
+              <option value="270">270°</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="group">
+          <h2 class="group-title">
+            <i data-lucide="sliders-horizontal"></i> Imagen <small>en vivo</small>
+            <button type="button" id="resetColorBtn" class="link-btn" title="Volver a los valores originales">
+              <i data-lucide="rotate-ccw"></i> Restablecer
+            </button>
+          </h2>
+
+          <div class="grid-2">
+            <div class="slider-row">
+              <div class="slider-header"><span><i data-lucide="zoom-in"></i> Zoom</span><span class="slider-val" id="zoomVal">1.0x</span></div>
+              <input type="range" id="zoomRange" min="1.0" max="3.0" step="0.1" value="1.0" class="range">
+            </div>
+            <div class="slider-row">
+              <div class="slider-header"><span><i data-lucide="sun"></i> Brillo</span><span class="slider-val" id="brightVal">Normal</span></div>
+              <input type="range" id="brightRange" min="-0.3" max="0.3" step="0.05" value="0.0" class="range">
+            </div>
+            <div class="slider-row">
+              <div class="slider-header"><span><i data-lucide="contrast"></i> Contraste</span><span class="slider-val" id="contrastVal">1.0x</span></div>
+              <input type="range" id="contrastRange" min="0.5" max="1.8" step="0.05" value="1.0" class="range">
+            </div>
+            <div class="slider-row">
+              <div class="slider-header"><span><i data-lucide="droplets"></i> Saturación</span><span class="slider-val" id="satVal">100%</span></div>
+              <input type="range" id="satRange" min="0.0" max="2.0" step="0.05" value="1.0" class="range">
+            </div>
+            <div class="slider-row">
+              <div class="slider-header"><span><i data-lucide="thermometer-sun"></i> Temperatura</span><span class="slider-val" id="warmthVal">Neutro</span></div>
+              <input type="range" id="warmthRange" min="-30" max="30" step="2" value="0" class="range range-warmth">
+            </div>
+            <div class="slider-row">
+              <div class="slider-header"><span><i data-lucide="sparkle"></i> Nitidez</span><span class="slider-val" id="sharpVal">0%</span></div>
+              <input type="range" id="sharpRange" min="0.0" max="1.0" step="0.1" value="0.0" class="range">
+            </div>
+          </div>
+
+          <div class="row">
+            <span class="row-icon"><i data-lucide="flip-horizontal-2"></i></span>
+            <div class="row-text"><span class="row-title">Modo espejo</span><span class="row-desc">Voltea la imagen horizontalmente</span></div>
+            <label class="switch"><input type="checkbox" id="mirrorToggle"><span class="slider"></span></label>
+          </div>
+        </section>
+
+        <section class="group">
+          <h2 class="group-title"><i data-lucide="focus"></i> Enfoque</h2>
+
+          <div class="row">
+            <span class="row-icon"><i data-lucide="scan-face"></i></span>
+            <div class="row-text"><span class="row-title">Autoenfoque continuo</span><span class="row-desc">Mantiene el rostro o sujeto nítido</span></div>
+            <label class="switch"><input type="checkbox" id="autofocusToggle" checked><span class="slider"></span></label>
+          </div>
+
+          <div class="slider-row" id="focusSliderRow">
+            <div class="slider-header"><span><i data-lucide="crosshair"></i> Enfoque manual</span><span class="slider-val" id="focusVal">Automático (AF)</span></div>
+            <input type="range" id="focusRange" min="0" max="100" step="5" value="50" class="range" disabled>
+            <div class="range-limits"><span>Macro</span><span>Estándar</span><span>Infinito</span></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============ PANTALLA ============ -->
+      <div class="tab-pane" id="paneScreen">
+        <section class="group">
+          <h2 class="group-title"><i data-lucide="monitor-smartphone"></i> Control de pantalla</h2>
+          <p class="group-desc">Maneja tu teléfono con ratón y teclado en una ventana de baja latencia.</p>
+
+          <div class="row">
+            <span class="row-icon"><i data-lucide="coffee"></i></span>
+            <div class="row-text"><span class="row-title">Mantener despierto</span><span class="row-desc">La pantalla del teléfono no se apaga sola</span></div>
+            <label class="switch"><input type="checkbox" id="stayAwakeToggle" checked><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <span class="row-icon"><i data-lucide="moon"></i></span>
+            <div class="row-text"><span class="row-title">Apagar pantalla del teléfono</span><span class="row-desc">Ahorra batería mientras lo controlas</span></div>
+            <label class="switch"><input type="checkbox" id="turnOffScreenToggle"><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <span class="row-icon"><i data-lucide="volume-2"></i></span>
+            <div class="row-text"><span class="row-title">Escuchar audio del teléfono</span><span class="row-desc">Reproduce el sonido en tu PC</span></div>
+            <label class="switch"><input type="checkbox" id="screenAudioToggle" checked><span class="slider"></span></label>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============ AUDIO ============ -->
+      <div class="tab-pane" id="paneMic">
+        <section class="group">
+          <h2 class="group-title"><i data-lucide="headphones"></i> Audio del teléfono</h2>
+          <p class="group-desc">Transmite la voz de tu celular o el sonido interno de Android a tus altavoces.</p>
+
+          <div class="row row-highlight">
+            <span class="row-icon"><i data-lucide="volume-2"></i></span>
+            <div class="row-text"><span class="row-title">Audio del sistema</span><span class="row-desc">Música, juegos y videos del teléfono</span></div>
+            <label class="switch"><input type="checkbox" id="systemAudioToggle"><span class="slider"></span></label>
+          </div>
+
+          <div class="field" id="micSourceRow">
+            <span class="field-label"><i data-lucide="mic"></i> Modo de captura</span>
+            <select id="micSourceSelect" class="select">
+              <option value="mic" selected>Micrófono · voz limpia</option>
+              <option value="voice-performance">Voz preamplificada · más volumen</option>
+              <option value="mic-unprocessed">Sin procesar · estudio</option>
+              <option value="playback">Audio del sistema</option>
+            </select>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-header"><span><i data-lucide="volume-1"></i> Volumen / ganancia</span><span class="slider-val" id="micVolVal">100%</span></div>
+            <input type="range" id="micVolRange" min="50" max="250" step="10" value="100" class="range">
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <span class="field-label"><i data-lucide="zap"></i> Latencia</span>
+              <div class="seg" data-for="micBufferSelect">
+                <button type="button" data-v="10">10 ms</button>
+                <button type="button" data-v="20">20 ms</button>
+                <button type="button" data-v="50">50 ms</button>
+              </div>
+              <select id="micBufferSelect" hidden>
+                <option value="10">Ultra baja (10 ms)</option>
+                <option value="20" selected>Baja (20 ms)</option>
+                <option value="50">Estable (50 ms)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <span class="field-label"><i data-lucide="radio"></i> Calidad</span>
+              <div class="seg" data-for="micBitrateSelect">
+                <button type="button" data-v="64K">64k</button>
+                <button type="button" data-v="128K">128k</button>
+                <button type="button" data-v="192K">192k</button>
+              </div>
+              <select id="micBitrateSelect" hidden>
+                <option value="64K">Ligera (64 Kbps)</option>
+                <option value="128K" selected>Estándar (128 Kbps)</option>
+                <option value="192K">Máxima (192 Kbps)</option>
+              </select>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Barra inferior -->
+    <footer class="footer">
+      <div class="status">
+        <span class="pulse idle" id="streamPulse"></span>
+        <span class="status-text" id="statusText">Listo para transmitir</span>
+      </div>
+      <button class="btn-danger" id="stopAllBtn" title="Detener todas las transmisiones">
+        <i data-lucide="power"></i><span>Detener todo</span>
+      </button>
+    </footer>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="main.js"></script>
+</body>
+</html>

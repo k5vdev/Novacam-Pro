@@ -1,0 +1,45 @@
+# Rust & Cargo Build Artifacts
+**/target/
+**/gen/schemas/
+*.pdb
+
+# Python Cache & Virtual Environments
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Binarios de terceros: no se redistribuyen (los descarga tools/get_scrcpy.ps1 / el usuario)
+bin/*
+!bin/.gitkeep
+/NovaCam_Pro.exe
+/NovaCam_Pro.old.exe
+
+# Executables & Logs
+app_stdout.log
+app_stderr.log
+*.log
+*.tmp
+test_*.mkv
+-
+
+# OS & Editor Artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Herramientas locales
+.claude/
+*.bak
+
+
+
+
+
